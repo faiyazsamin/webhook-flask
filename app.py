@@ -72,7 +72,7 @@ def get_request_details():
     else:
         return jsonify({"error": "Invalid request"})
 
-@app.route('/webhook_listener/<endpoint>', methods=['POST'])
+@app.route('/webhook_listener/<endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def webhook_listener(endpoint):
     # Extracting data from the request
     method = request.method
@@ -96,6 +96,12 @@ def webhook_listener(endpoint):
 
     # Returning the response
     return jsonify({"status": "success", "id": new_request.id})
+
+@app.route('/delete/<endpoint>', methods=['GET'])
+def delete_admin_requests(endpoint):
+    db.session.query(Request).filter_by(endpoint=endpoint).delete()
+    db.session.commit()
+    return "Deleted!"
 
 if __name__ == '__main__':
     app.run(debug=True)
