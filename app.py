@@ -1,13 +1,15 @@
 import json
+import os
 from datetime import datetime, timedelta
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__, template_folder='templates', static_folder='templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///requests.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
 
 class Request(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,9 +21,17 @@ class Request(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow(), nullable=False)
     endpoint = db.Column(db.Text)
 
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'templates'),
+                               'favicon.png', mimetype='image/png')
+
+
 @app.route('/', methods=['GET'])
 def get_html():
     return render_template('index.html')
+
 
 # @app.route('/validate', methods=['POST'])
 # def validate_password():
@@ -57,6 +67,7 @@ def get_requests(endpoint):
             request_data.append(request_info)
     return jsonify(request_data)
 
+
 @app.route('/get_request_details', methods=['GET'])
 def get_request_details():
     request_id = request.args.get('id')
@@ -72,6 +83,7 @@ def get_request_details():
     else:
         return jsonify({"error": "Invalid request"})
 
+
 @app.route('/webhook_listener/<endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def webhook_listener(endpoint):
     # Extracting data from the request
@@ -83,7 +95,6 @@ def webhook_listener(endpoint):
     timestamp = datetime.utcnow()  # Assuming current time as the timestamp
     gmt_plus_6 = timedelta(hours=6)
     current_time_gmt_plus_6 = timestamp + gmt_plus_6
-
 
     # Creating a new Request object with extracted data
     new_request = Request(method=method, ip=ip, headers=headers,
@@ -97,11 +108,18 @@ def webhook_listener(endpoint):
     # Returning the response
     return jsonify({"status": "success", "id": new_request.id})
 
+
+@app.route('/delete/', defaults={'endpoint': None}, methods=['GET'])
 @app.route('/delete/<endpoint>', methods=['GET'])
-def delete_admin_requests(endpoint):
-    db.session.query(Request).filter_by(endpoint=endpoint).delete()
-    db.session.commit()
+def delete_user_webhook(endpoint):
+    if endpoint is None:
+        db.session.query(Request).delete()
+        db.session.commit()
+    else:
+        db.session.query(Request).filter_by(endpoint=endpoint).delete()
+        db.session.commit()
     return "Deleted!"
+
 
 if __name__ == '__main__':
     app.run(debug=True)

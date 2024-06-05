@@ -44,6 +44,10 @@ function fetchRequests(user) {
 				};
 				sidebar.appendChild(div);
 			}
+			const delete_button = document.createElement('div');
+			delete_button.innerHTML = `<button id="delete" class="delete">Clear All Data</button>`;
+			sidebar.appendChild(delete_button);
+			deleteWebhook(user);
 		});
 }
 
@@ -55,11 +59,34 @@ function fetchRequestDetails(id) {
 			document.getElementById('ip').textContent = data.ip;
 			document.getElementById('headers').textContent = JSON.stringify(JSON.parse(data.headers), null, 2);
 			document.getElementById('query-strings').textContent = decodeURIComponent(data.query_strings.replace(/&/g, '\n'));
-			if (data.raw_content == 'None') {
+			if (data.raw_content === 'None') {
 				document.getElementById('raw-content').textContent = data.raw_content;
 			} else {
 				document.getElementById('raw-content').textContent = JSON.stringify(JSON.parse(data.raw_content), null, 2);
 			}
-
 		});
 }
+
+function deleteWebhook(user) {
+    const deleteButton = document.getElementById('delete');
+
+    deleteButton.addEventListener('click', () => {
+        if (confirm('Are you sure?')) {
+            fetch(`/delete/` + user, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    alert('Deleted Successfully!');
+                    fetchRequests(user);
+                } else {
+                    return Promise.reject('Network response was not ok.');
+                }
+            });
+        }
+    });
+}
+
+// Call the function to set up the event listener
